@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useRef, useEffect, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal } from "react";
 import { jsLogo } from "../assets";
 import { IoClose, IoSearchOutline } from "react-icons/io5";
 import { RiUserFill } from "react-icons/ri";
@@ -15,6 +15,10 @@ import Container from "./Container";
 import { useCategories } from "../hooks/useCategories";
 import HeaderCartIcon from "./HeaderCartIcon";
 import HeaderWishlistIcon from "./HeaderWishListIcon";
+import { useSearchProducts } from "../hooks/useSearchProducts";
+import SearchSuggestions from "../ui/SearchSuggestions";
+import Portal from "../ui/Portal";
+
 
 const headerNavLinks = [
   { title: "Home", to: "/" },
@@ -28,13 +32,22 @@ const headerNavLinks = [
 ];
 
 const Header = () => {
-  const [searchText, setSearchText] = useState("");
+  // const [searchText, setSearchText] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [showHeader, setShowHeader] = useState(true);
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
 
-  // Use the custom hook to fetch categories
-  const { data: categories, isLoading, error } = useCategories();
+  
+const [searchText, setSearchText] = useState("");
+const [showSuggestions, setShowSuggestions] = useState(false);
+const containerRef = useRef<HTMLDivElement | null>(null);
+
+
+const { data: searchResults = [], isLoading: isSearchLoading } = useSearchProducts(searchText);
+const { data: categories, isLoading: isCategoriesLoading, error: categoriesError } = useCategories();
+
+ console.log("Search results:", searchResults); // 👈 Add it here
+
 
   // Smart sticky header effect
   useEffect(() => {
@@ -74,6 +87,35 @@ const Header = () => {
     return () => document.removeEventListener("click", closeMenu);
   }, []);
 
+  //Disable body scroll when menu opens
+  useEffect(() => {
+  if (menuOpen) {
+    document.body.style.overflow = "hidden";
+  } else {
+    document.body.style.overflow = "";
+  }
+
+  return () => {
+    document.body.style.overflow = "";
+  };
+}, [menuOpen]);
+
+
+
+  // click-outside to close suggestions
+useEffect(() => {
+  const handleClickOutside = (e: MouseEvent) => {
+    if (!containerRef.current) return;
+    if (!(e.target instanceof Node)) return;
+    if (!containerRef.current.contains(e.target)) {
+      setShowSuggestions(false);
+    }
+  };
+  document.addEventListener("mousedown", handleClickOutside);
+  return () => document.removeEventListener("mousedown", handleClickOutside);
+}, []);
+
+
   return (
     <>
       {/* Main header */}
@@ -93,25 +135,44 @@ const Header = () => {
             />
           </Link>
           {/* Search (Visible on larger screens) */}
-          <div className="hidden md:inline-flex max-w-3xl w-[300px] lg:w-full relative">
+          <div ref={containerRef} className="hidden md:inline-flex max-w-3xl w-[300px] lg:w-full relative">
             <input
               type="text"
-              onChange={(e) => setSearchText(e.target.value)}
               value={searchText}
+                  onChange={(e) => {
+      setSearchText(e.target.value);
+      setShowSuggestions(true);
+    }}
+    onFocus={() => setShowSuggestions(true)}
               placeholder="Search Products"
               className="w-full flex-1 rounded-sm text-gray-900 text-lg placeholder:text-base 
             shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 
             focus:ring-0  focus:outline-(--color-skyBlue) sm:text-sm px-4 py-2"
             />
-            {searchText ? (
-              <IoClose
-                onClick={() => setSearchText("")}
-                className="absolute top-2.5 right-4 text-xl hover:text-red-500 cursor-pointer duration-200"
-              />
-            ) : (
-              <IoSearchOutline className="absolute top-2.5 right-4 text-xl" />
-            )}
-          </div>
+
+  {searchText ? (
+    <IoClose
+      onClick={() => {
+        setSearchText("");
+        setShowSuggestions(false);
+      }}
+      className="absolute top-2.5 right-4 text-xl hover:text-red-500 cursor-pointer duration-200"
+    />
+  ) : (
+    <IoSearchOutline className="absolute top-2.5 right-4 text-xl" />
+  )}
+            
+  <SearchSuggestions
+    results={searchResults}
+    loading={isSearchLoading}
+    visible={showSuggestions && !!searchText.trim()}
+    searchText={searchText}
+    onSelect={() => {
+      setShowSuggestions(false);
+      setSearchText("");
+    }}
+  />
+</div>
 
           {/* Menubar */}
           <div className="flex items-center gap-x-6 text-2xl">
@@ -169,11 +230,11 @@ const Header = () => {
                     transitionProperty: "opacity, transform, max-height",
                   }}
                 >
-                  {isLoading ? (
+                  {isCategoriesLoading ? (
                     <MenuItem disabled>
                       <span>Loading...</span>
                     </MenuItem>
-                  ) : error ? (
+                  ) : categoriesError ? (
                     <MenuItem disabled>
                       <span>Error loading categories</span>
                     </MenuItem>
@@ -268,18 +329,138 @@ const Header = () => {
         </button>
 
         {/* Mobile Search Input */}
-        <div className="p-5 mt-2 relative">
-          <input
-            type="text"
-            onChange={(e) => setSearchText(e.target.value)}
-            value={searchText}
-            placeholder="Search Products"
-            className="w-full rounded-sm text-(--color-white) text-lg placeholder:text-base 
-              shadow-sm ring-1 ring-(--color-skyBlue) placeholder:text-gray-400 
-               sm:text-sm px-4 py-3 focus:bg-(--color-skyBlue)"
-          />
-          <IoSearchOutline className="absolute top-8 right-8 text-xl " />
-        </div>
+<div className="md:hidden">
+  <div className="p-5 mt-2 relative">
+    <input
+      type="text"
+      value={searchText}
+      onChange={(e) => {
+        setSearchText(e.target.value);
+        setShowSuggestions(true);
+      }}
+      onFocus={() => setShowSuggestions(true)}
+      placeholder="Search Products"
+      className="w-full rounded-sm text-(--color-white) text-lg placeholder:text-base shadow-sm ring-1 ring-(--color-skyBlue) placeholder:text-gray-400 sm:text-sm px-4 py-3"
+    />
+    <IoSearchOutline className="absolute top-8 right-8 text-xl " />
+  </div>
+
+  {/* Full-screen overlay on mobile when suggestions are visible */}
+ {/* {showSuggestions && !!searchText.trim() && (
+  <Portal >
+    <div
+      className=" fixed top-0 inset-0 z-[9999] bg-blue-500 overflow-y-scroll md:hidden"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          setShowSuggestions(false);
+        }
+      }}
+    >
+      <div className="p-4 sticky top-0 bg-white z-[10000] border-b flex items-center gap-2">
+        <input
+          autoFocus
+          type="text"
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          className="flex-1 px-3 py-2 border rounded"
+        />
+        <button
+          className="ml-2 px-3 py-2 text-sm font-medium text-gray-700 border rounded"
+          onClick={() => setShowSuggestions(false)}
+        >
+          Close
+        </button>
+      </div>
+
+      <div className="p-3">
+        <SearchSuggestions
+          results={searchResults}
+          loading={isSearchLoading}
+          visible={true}
+          searchText={searchText}
+          onSelect={() => setShowSuggestions(false)}
+        />
+      </div>
+    </div>
+  </Portal>
+)} */}
+
+
+{showSuggestions && !!searchText.trim() && (
+  <Portal>
+    <div
+      className="fixed inset-0 z-[9999] bg-white flex flex-col md:hidden"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          setShowSuggestions(false);
+        }
+      }}
+    >
+      {/* Top search bar */}
+      <div className="sticky top-0 bg-white z-[10000] border-b flex items-center gap-2 p-4">
+        <input
+          autoFocus
+          type="text"
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          className="flex-1 px-3 py-2 border rounded text-gray-800"
+          placeholder="Search products..."
+        />
+        <button
+          className="ml-2 px-3 py-2 text-sm font-medium text-gray-700 border rounded"
+          onClick={() => setShowSuggestions(false)}
+        >
+          Close
+        </button>
+      </div>
+
+      {/* Results list */}
+      <div className="flex-1 overflow-y-auto p-3">
+        {isSearchLoading ? (
+          <p className="text-gray-500 text-center">Searching...</p>
+        ) : searchResults && searchResults.length > 0 ? (
+          <ul className="divide-y divide-gray-100">
+            {searchResults.map((product: { id: Key | null | undefined; slug: any; image: any; images: any[]; variants: { image: any; }[]; name: string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined; price: { toLocaleString: () => string | number | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | null | undefined; }; }) => (
+              <li key={product.id}>
+                <Link
+                  to={`/product/${product.slug}`}
+                  className="flex items-center gap-3 p-2 hover:bg-gray-100"
+                  onClick={() => setShowSuggestions(false)}
+                >
+                  <img
+                    src={
+                      product.image ||
+                      product.images?.[0] ||
+                      product.variants?.[0]?.image ||
+                      "/placeholder.png"
+                    }
+                    // alt={product.name}
+                    className="w-12 h-12 rounded object-cover flex-shrink-0"
+                  />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-gray-900">
+                      {product.name}
+                    </span>
+                    {product.price && (
+                      <span className="text-xs text-gray-500">
+                        ₦{product.price.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-500 text-center">No results found</p>
+        )}
+      </div>
+    </div>
+  </Portal>
+)}
+
+
+</div>
 
         {/* Mobile Navigation Links */}
         <div className="flex flex-col ">

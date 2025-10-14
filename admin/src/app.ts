@@ -6,6 +6,8 @@ import feedCarouselRoute from "./routes/feedCarouselRoute.js"
 import categoryRoute from "./routes/categoryRoute.js";
 import highlightsRoute from "./routes/highlightsRoute.js";
 import productsRoute from './routes/productsRoute.js';
+import searchRoutes from "./routes/searchRoute.js";
+
 const app = express();
 
 app.use(cors());
@@ -16,7 +18,7 @@ app.use("/api/feed-carousel", feedCarouselRoute); // All feed carousel routes wi
 app.use("/api/categories", categoryRoute);
 app.use("/api/products", productsRoute);
 app.use("/api/highlights", highlightsRoute);
-
+app.use("/api/search", searchRoutes);
 
 
 app.get('/', (_req, res) => {
