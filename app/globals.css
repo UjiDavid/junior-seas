@@ -1,0 +1,76 @@
+@import 'tailwindcss';
+@theme {
+  --full-flex: 0 0 100%;
+
+  /* --color-*: initial; */
+  --color-white: #ffff;
+  --color-navyBlue: #001f3f;
+  --color-black: #000000;
+  --color-gray1: #b5b5b5;
+  --color-gray2: #dfdfdf;
+  --color-cloudGray: #f1f3f5;
+  --color-steelBlue: #4682b4;
+  --color-skyBlue: #87ceeb;
+  --color-powderBlue: #b0e0e6;
+  --color-classicGold: #ffd700;
+  --color-classicteal: #008080;
+  --color-columbia-blue: #c4d8e2;
+
+  --card-box-shadow: 0 0 40px -8px rgb(0 0 0 / 16%),
+    0 0 24px -16px rgb(0 0 0 / 16%);
+  --card-hover-transform: scale3d(1.03, 1.03, 1.08)
+    translate3d(0.1rem, -0.25rem, 20rem);
+}
+
+@layer utilities {
+  .swiper-wrapper {
+    align-items: center;
+  }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .active-link {
+    @apply text-(--color-columbia-blue)/90 font-bold;
+  }
+
+  .google-reviews-widget {
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  .google-reviews-widget * {
+    box-sizing: border-box !important;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-fade-in {
+    animation: fade-in 0.3s ease;
+  }
+
+  /* .card-pop {
+        box-shadow: var(--card-box-shadow);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+    
+      .card-pop:hover {
+        transform: var(--card-hover-transform);
+        box-shadow: var(--card-box-shadow);
+      } */
+}
+
+@plugin "@tailwindcss/typography";
+@plugin "@tailwindcss/aspect-ratio";
